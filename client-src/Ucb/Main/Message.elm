@@ -1,9 +1,7 @@
 module Ucb.Main.Message exposing (..)
 
-import Browser
-import Bytes exposing (Bytes)
-import Url exposing (..)
 import Browser exposing (..)
+import Bytes exposing (Bytes)
 import HashingContainers.HashDict exposing (HashDict)
 import HashingContainers.HashSet exposing (HashSet)
 import Ucb.Unison.BranchDict exposing (..)
@@ -17,7 +15,7 @@ import Unison.Referent exposing (..)
 import Unison.Symbol exposing (..)
 import Unison.Term exposing (..)
 import Unison.Type exposing (..)
-import Url
+import Url exposing (..)
 
 
 type Message

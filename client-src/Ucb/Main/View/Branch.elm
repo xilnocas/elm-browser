@@ -308,16 +308,19 @@ viewCausal :
     -> Element Message
 viewCausal model hash causal =
     let
-        debugViewHash_ = Debug.log "debugViewHash: " hash
+        debugViewHash_ =
+            Debug.log "debugViewHash: " hash
+
         viewHash :
             BranchHash
             -> Element Message
         viewHash hash_ =
             el
                 [ pointer
+
                 -- , onClick (User_FocusBranch hash_)
                 ]
-                (link [] {url = "/branch/" ++ hash_, label = text hash_})
+                (link [] { url = "/branch/" ++ hash_, label = text hash_ })
 
         viewParents : Element Message
         viewParents =

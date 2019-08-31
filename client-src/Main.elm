@@ -99,7 +99,7 @@ init _ url key =
 
         initialGetHash : BranchHash -> Cmd Message
         initialGetHash hash = 
-              Task.attempt User_FocusBranch hash
+              Debug.todo "add navigation bar input api" -- Task.attempt User_FocusBranch hash
               
     in
         case initialHash of 
@@ -107,7 +107,9 @@ init _ url key =
             ( model, initialCommand )
           Just someHash ->
             -- ( model, initialGetHash someHash )
-            updateUserFocusBranch someHash model 
+            -- updateUserFocusBranch someHash model 
+            ( model, initialCommand )
+            -- TODO: add linking to branches, terms etc
 
 
 {-| TODO rename updateHttpFooBarBaz to update\_Http\_FooBarBaz

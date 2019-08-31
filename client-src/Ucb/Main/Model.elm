@@ -1,6 +1,5 @@
 module Ucb.Main.Model exposing (..)
 
-import Url
 import Browser.Navigation as Nav
 import Bytes exposing (Bytes)
 import HashingContainers.HashDict as HashDict exposing (HashDict)
@@ -18,6 +17,7 @@ import Unison.Referent exposing (..)
 import Unison.Symbol exposing (..)
 import Unison.Term exposing (..)
 import Unison.Type exposing (..)
+import Url
 import Util.HashSet as HashSet
 
 
