@@ -17,7 +17,9 @@ import Unison.Name exposing (..)
 
 view : Model -> Document Message
 view model =
-    { title = "Unison Code Browser", body = [ layout [] (view2 model) ] }
+    { title = "Unison Code Browser"
+    , body = [ layout [] (view2 model) ]
+    }
 
 
 view2 : Model -> Element Message

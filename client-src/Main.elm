@@ -8,6 +8,8 @@ import HashingContainers.HashDict as HashDict exposing (HashDict)
 import HashingContainers.HashSet as HashSet exposing (HashSet)
 import Misc exposing (..)
 import Task exposing (Task)
+import Url exposing (..)
+import Url.Parser as UrlParser exposing ((</>))
 import Ucb.Main.Message exposing (Message(..))
 import Ucb.Main.Model exposing (..)
 import Ucb.Main.View exposing (view)
@@ -39,7 +41,6 @@ main =
         , onUrlRequest = LinkClicked
         , onUrlChange = UrlChanged
         }
-
 
 {-| Port that elm-live runs on
 -}
@@ -80,17 +81,33 @@ init _ url key =
                 , search = ""
                 , key = key
                 }
+            , url = url
+            , key = key
             , errors = []
             , isDevMode = isDevMode
             }
+
 
         -- First command: fetch _head path!
         initialCommand : Cmd Message
         initialCommand =
             model.api.unison.getHeadHash
                 |> Task.attempt Http_GetHeadHash
+
+        initialHash : Maybe String
+        initialHash = UrlParser.parse branchParser url
+
+        initialGetHash : BranchHash -> Cmd Message
+        initialGetHash hash = 
+              Task.attempt User_FocusBranch hash
+              
     in
-    ( model, initialCommand )
+        case initialHash of 
+          Nothing ->
+            ( model, initialCommand )
+          Just someHash ->
+            -- ( model, initialGetHash someHash )
+            updateUserFocusBranch someHash model 
 
 
 {-| TODO rename updateHttpFooBarBaz to update\_Http\_FooBarBaz
@@ -125,12 +142,66 @@ update message model =
         User_DebugButton ->
             updateUserDebugButton model
 
-        UrlChanged _ ->
-            ( model, Cmd.none )
+        UrlChanged url ->
+          let 
+              debugLogRequest_ = Debug.log "UrlChanged request: " url
+              debugLogPath_ = Debug.log "UrlChanged request.path: " url.path 
+              maybeHash = UrlParser.parse branchParser url
+            in 
+                case maybeHash of
+                  Nothing ->
+                    updateUserFocusBranch "head" model
+                  Just hash ->
+                    updateUserFocusBranch hash model
+                    {- ( model, Nav.pushUrl model.key request.path) --}
 
-        LinkClicked _ ->
-            ( model, Cmd.none )
+        LinkClicked urlRequest ->
+          let _ = Debug.log "LinkChanged incoming request: " urlRequest in
+          {- case urlRequest of
+            Browser.Internal url ->
+              let urlPath = UrlParser.parse branchParser url
+                  _ = Debug.log "LinkChanged: " url
+                in 
+              case urlPath of 
+                Nothing -> 
+                  Debug.todo "LinkChanged"
+                Just hash ->
+                  ( model, Nav.pushUrl model.key hash)
 
+            Browser.External href ->
+              ( model, Nav.load href )
+          -} 
+            case urlRequest of 
+            Browser.Internal url -> 
+              -- updateUserFocusBranch url.path model
+              let maybeHash = UrlParser.parse branchParser url
+                  _ = Debug.log "Internal LinkChanged: " url
+              in 
+                case maybeHash of 
+                  Nothing -> 
+                    let _ = Debug.log "No hash given" maybeHash in
+                      ( model, model.api.unison.getHeadHash
+                        |> Task.attempt Http_GetHeadHash
+                      )
+                  Just hash ->
+                    let path = "/branch/" ++ hash 
+                    -- let path = hash 
+                        _ = Debug.log "this should be just a hash: " hash 
+                    in
+                      ( model , Nav.pushUrl model.key path )
+                  -- updateUserFocusBranch hash model
+                  --}
+
+            Browser.External hash ->  
+              let _ = Debug.log "External LinkChanged: " hash
+                in
+              ( model, Nav.pushUrl model.key hash )
+              -- updateUserFocusBranch hash model
+
+
+branchParser : UrlParser.Parser (String -> a) a
+branchParser = 
+    UrlParser.s "branch" </> UrlParser.string
 
 {-| Whatever you're debugging. Might be nothing!
 -}
@@ -365,15 +436,19 @@ updateUserFocusBranch :
     BranchHash
     -> Model
     -> ( Model, Cmd Message )
+-- updateUserFocusBranch hash model =
+    -- let urlPath = "branch/" ++ hash in
 updateUserFocusBranch hash model =
+    let _ = Debug.log "updateUserFocusBranch hash" hash in
     case HashDict.get hash model.codebase.branches of
         Nothing ->
             ( model
-            , getBranch
+            , {-Cmd.batch [Nav.pushUrl model.key urlPath, -} getBranch
                 model.api.unison
                 model.codebase
                 hash
                 |> Task.attempt Http_GetBranch
+              -- ] 
             )
 
         Just branch ->
@@ -390,11 +465,13 @@ updateUserFocusBranch hash model =
                     , successors = model.codebase.successors
                     }
               }
-            , Task.map2
+              , {- Cmd.batch [Nav.pushUrl model.key urlPath, -}
+              Task.map2
                 Tuple.pair
                 (getMissingTermTypes model branch)
                 (getMissingTypes model branch)
                 |> Task.attempt Http_GetTermTypesAndTypes
+             -- ]
             )
 
 
@@ -466,7 +543,6 @@ updateUserToggleTerm id model =
       }
     , command
     )
-
 
 subscriptions :
     Model

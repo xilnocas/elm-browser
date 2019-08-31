@@ -1,5 +1,6 @@
 module Ucb.Main.Model exposing (..)
 
+import Url
 import Browser.Navigation as Nav
 import Bytes exposing (Bytes)
 import HashingContainers.HashDict as HashDict exposing (HashDict)
@@ -71,6 +72,8 @@ type alias Model =
 
     -- The errors we've seen. Just slappin' them in the model to put into the
     -- HTML when something is going wrong.
+    , key : Nav.Key
+    , url : Url.Url
     , errors : List Error
 
     -- Whether we're running in dev and need to use CORS headers
