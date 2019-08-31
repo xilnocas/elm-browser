@@ -82,7 +82,6 @@ init _ url key =
                 , key = key
                 }
             , url = url
-            , key = key
             , errors = []
             , isDevMode = isDevMode
             }
@@ -109,45 +108,38 @@ init _ url key =
 
         Just someHash ->
             -- ( model, initialGetHash someHash )
-            -- updateUserFocusBranch someHash model
             ( model, initialCommand )
 
 
-
--- TODO: add linking to branches, terms etc
-
-
-{-| TODO rename updateHttpFooBarBaz to update\_Http\_FooBarBaz
--}
 update : Message -> Model -> ( Model, Cmd Message )
 update message model =
     case message of
         Http_GetHeadHash result ->
-            updateHttpGetHeadHash result model
+            update_Http_GetHeadHash result model
 
         Http_GetBranch result ->
-            updateHttpGetBranch result model
+            update_Http_GetBranch result model
 
         Http_GetTerm result ->
-            updateHttpGetTerm result model
+            update_Http_GetTerm result model
 
         Http_GetTermTypesAndTypes result ->
-            updateHttpGetTermTypesAndTypes result model
+            update_Http_GetTermTypesAndTypes result model
 
         User_FocusBranch hash ->
-            updateUserFocusBranch hash model
+            update_User_FocusBranch hash model
 
         User_Search search ->
             update_User_Search search model
 
         User_ToggleBranch hash ->
-            updateUserToggleBranch hash model
+            update_User_ToggleBranch hash model
 
         User_ToggleTerm id ->
-            updateUserToggleTerm id model
+            update_User_ToggleTerm id model
 
         User_DebugButton ->
-            updateUserDebugButton model
+            update_User_DebugButton model
 
         UrlChanged url ->
             let
@@ -162,34 +154,18 @@ update message model =
             in
             case maybeHash of
                 Nothing ->
-                    updateUserFocusBranch "head" model
+                    update_User_FocusBranch "head" model
 
                 Just hash ->
-                    updateUserFocusBranch hash model
+                    update_User_FocusBranch hash model
 
-        {- ( model, Nav.pushUrl model.key request.path) - -}
         LinkClicked urlRequest ->
             let
                 _ =
                     Debug.log "LinkChanged incoming request: " urlRequest
             in
-            {- case urlRequest of
-               Browser.Internal url ->
-                 let urlPath = UrlParser.parse branchParser url
-                     _ = Debug.log "LinkChanged: " url
-                   in
-                 case urlPath of
-                   Nothing ->
-                     Debug.todo "LinkChanged"
-                   Just hash ->
-                     ( model, Nav.pushUrl model.key hash)
-
-               Browser.External href ->
-                 ( model, Nav.load href )
-            -}
             case urlRequest of
                 Browser.Internal url ->
-                    -- updateUserFocusBranch url.path model
                     let
                         maybeHash =
                             UrlParser.parse branchParser url
@@ -213,24 +189,17 @@ update message model =
                                 path =
                                     "/branch/" ++ hash
 
-                                -- let path = hash
                                 _ =
                                     Debug.log "this should be just a hash: " hash
                             in
-                            ( model, Nav.pushUrl model.key path )
+                            ( model, Nav.pushUrl model.ui.key path )
 
-                -- updateUserFocusBranch hash model
-                --}
                 Browser.External hash ->
                     let
                         _ =
                             Debug.log "External LinkChanged: " hash
                     in
-                    ( model, Nav.pushUrl model.key hash )
-
-
-
--- updateUserFocusBranch hash model
+                    ( model, Nav.pushUrl model.ui.key hash )
 
 
 branchParser : UrlParser.Parser (String -> a) a
@@ -240,20 +209,20 @@ branchParser =
 
 {-| Whatever you're debugging. Might be nothing!
 -}
-updateUserDebugButton :
+update_User_DebugButton :
     Model
     -> ( Model, Cmd Message )
-updateUserDebugButton model =
+update_User_DebugButton model =
     ( model, Cmd.none )
 
 
 {-| Got the head hash. Next step: get the actual (decoded) bytes.
 -}
-updateHttpGetHeadHash :
+update_Http_GetHeadHash :
     Result (Http.Error String) (Http.Response BranchHash)
     -> Model
     -> ( Model, Cmd Message )
-updateHttpGetHeadHash result model =
+update_Http_GetHeadHash result model =
     case result of
         Err err ->
             ( { model | errors = Err_GetHeadHash err :: model.errors }
@@ -261,14 +230,14 @@ updateHttpGetHeadHash result model =
             )
 
         Ok response ->
-            updateHttpGetHeadHash2 response model
+            update_Http_GetHeadHash2 response model
 
 
-updateHttpGetHeadHash2 :
+update_Http_GetHeadHash2 :
     Http.Response BranchHash
     -> Model
     -> ( Model, Cmd Message )
-updateHttpGetHeadHash2 response model =
+update_Http_GetHeadHash2 response model =
     ( model
     , getBranch
         model.api.unison
@@ -278,7 +247,7 @@ updateHttpGetHeadHash2 response model =
     )
 
 
-updateHttpGetBranch :
+update_Http_GetBranch :
     Result (Http.Error Bytes)
         ( BranchHash
         , { branches : BranchDict Branch
@@ -288,7 +257,7 @@ updateHttpGetBranch :
         )
     -> Model
     -> ( Model, Cmd Message )
-updateHttpGetBranch result model =
+update_Http_GetBranch result model =
     case result of
         Err err ->
             ( { model | errors = Err_GetBranch err :: model.errors }
@@ -296,10 +265,10 @@ updateHttpGetBranch result model =
             )
 
         Ok result2 ->
-            updateHttpGetBranch2 result2 model
+            update_Http_GetBranch2 result2 model
 
 
-updateHttpGetBranch2 :
+update_Http_GetBranch2 :
     ( BranchHash
     , { branches : HashDict BranchHash Branch
       , parents : HashDict BranchHash (HashSet BranchHash)
@@ -308,7 +277,7 @@ updateHttpGetBranch2 :
     )
     -> Model
     -> ( Model, Cmd Message )
-updateHttpGetBranch2 ( hash, { branches, parents, successors } ) model =
+update_Http_GetBranch2 ( hash, { branches, parents, successors } ) model =
     let
         newBranches : BranchDict Branch
         newBranches =
@@ -354,11 +323,11 @@ updateHttpGetBranch2 ( hash, { branches, parents, successors } ) model =
     )
 
 
-updateHttpGetTerm :
+update_Http_GetTerm :
     Result (Http.Error Bytes) ( Id, Http.Response (Term Symbol) )
     -> Model
     -> ( Model, Cmd message )
-updateHttpGetTerm result model =
+update_Http_GetTerm result model =
     case result of
         Err err ->
             ( { model | errors = Err_GetTerm err :: model.errors }
@@ -366,14 +335,14 @@ updateHttpGetTerm result model =
             )
 
         Ok response ->
-            updateHttpGetTerm2 response model
+            update_Http_GetTerm2 response model
 
 
-updateHttpGetTerm2 :
+update_Http_GetTerm2 :
     ( Id, Http.Response (Term Symbol) )
     -> Model
     -> ( Model, Cmd message )
-updateHttpGetTerm2 ( id, response ) model =
+update_Http_GetTerm2 ( id, response ) model =
     ( { model
         | codebase =
             { terms = HashDict.insert id response.body model.codebase.terms
@@ -391,11 +360,11 @@ updateHttpGetTerm2 ( id, response ) model =
     )
 
 
-updateHttpGetTermTypesAndTypes :
+update_Http_GetTermTypesAndTypes :
     Result (Http.Error Bytes) ( List ( Id, Type Symbol ), List ( Id, Declaration Symbol ) )
     -> Model
     -> ( Model, Cmd message )
-updateHttpGetTermTypesAndTypes result model =
+update_Http_GetTermTypesAndTypes result model =
     case result of
         Err err ->
             ( { model | errors = Err_GetTypes err :: model.errors }
@@ -403,14 +372,14 @@ updateHttpGetTermTypesAndTypes result model =
             )
 
         Ok response ->
-            updateHttpGetTermTypesAndTypes2 response model
+            update_Http_GetTermTypesAndTypes2 response model
 
 
-updateHttpGetTermTypesAndTypes2 :
+update_Http_GetTermTypesAndTypes2 :
     ( List ( Id, Type Symbol ), List ( Id, Declaration Symbol ) )
     -> Model
     -> ( Model, Cmd message )
-updateHttpGetTermTypesAndTypes2 ( termTypes, types ) model =
+update_Http_GetTermTypesAndTypes2 ( termTypes, types ) model =
     ( { model
         | codebase =
             { termTypes =
@@ -467,32 +436,23 @@ update_User_Search search model =
     children! When the request comes back, we'll switch focus.
 
 -}
-updateUserFocusBranch :
+update_User_FocusBranch :
     BranchHash
     -> Model
     -> ( Model, Cmd Message )
-
-
-
--- updateUserFocusBranch hash model =
--- let urlPath = "branch/" ++ hash in
-
-
-updateUserFocusBranch hash model =
+update_User_FocusBranch hash model =
     let
         _ =
-            Debug.log "updateUserFocusBranch hash" hash
+            Debug.log "update_User_FocusBranch hash" hash
     in
     case HashDict.get hash model.codebase.branches of
         Nothing ->
             ( model
-            , {- Cmd.batch [Nav.pushUrl model.key urlPath, -}
-              getBranch
+            , getBranch
                 model.api.unison
                 model.codebase
                 hash
                 |> Task.attempt Http_GetBranch
-              -- ]
             )
 
         Just branch ->
@@ -509,21 +469,19 @@ updateUserFocusBranch hash model =
                     , successors = model.codebase.successors
                     }
               }
-            , {- Cmd.batch [Nav.pushUrl model.key urlPath, -}
-              Task.map2
+            , Task.map2
                 Tuple.pair
                 (getMissingTermTypes model branch)
                 (getMissingTypes model branch)
                 |> Task.attempt Http_GetTermTypesAndTypes
-              -- ]
             )
 
 
-updateUserToggleBranch :
+update_User_ToggleBranch :
     BranchHash
     -> Model
     -> ( Model, Cmd Message )
-updateUserToggleBranch hash model =
+update_User_ToggleBranch hash model =
     ( { model
         | ui =
             { branches =
@@ -552,11 +510,11 @@ updateUserToggleBranch hash model =
     )
 
 
-updateUserToggleTerm :
+update_User_ToggleTerm :
     Id
     -> Model
     -> ( Model, Cmd Message )
-updateUserToggleTerm id model =
+update_User_ToggleTerm id model =
     let
         command : Cmd Message
         command =

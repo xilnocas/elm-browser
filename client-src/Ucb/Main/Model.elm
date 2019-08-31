@@ -72,7 +72,6 @@ type alias Model =
 
     -- The errors we've seen. Just slappin' them in the model to put into the
     -- HTML when something is going wrong.
-    , key : Nav.Key
     , url : Url.Url
     , errors : List Error
 
