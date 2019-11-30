@@ -245,7 +245,7 @@ viewBranchTerm2 :
     -> NameSegment
     -> Maybe (HashSet ( Reference, Reference ))
     -> Element Message
-viewBranchTerm2 view i reference name _ =
+viewBranchTerm2 view i reference name links =
     let
         -- Surround by parens if it begins with a symboly character
         name2 : String
@@ -260,84 +260,130 @@ viewBranchTerm2 view i reference name _ =
 
                 Nothing ->
                     name
-    in
-    case reference of
-        Builtin _ ->
-            el
-                [ above <|
-                    if view.hovered == Just (HoverTerm i reference) then
-                        el
-                            hoverStyle
-                            (column
-                                []
-                                (List.map
-                                    (nameToString >> text)
-                                    (view.termNames (Ref reference))
-                                )
-                            )
 
-                    else
-                        none
-                , codeFont
-                , onMouseEnter (User_Hover (HoverTerm i reference))
-                , onMouseLeave User_Unhover
-                ]
-                (text name2)
+        viewLinkRef linkRef =
+            let
+                term =
+                    List.head (view.termNames (Ref linkRef))
 
-        Derived id ->
-            column []
-                [ row
-                    [ codeFont
-                    ]
-                    [ el
-                        [ above <|
-                            if view.hovered == Just (HoverTerm i reference) then
-                                el
-                                    hoverStyle
-                                    (column
-                                        []
-                                        (el
-                                            [ hashColor ]
-                                            (text id.hash)
-                                            :: List.map
-                                                (nameToString >> text)
-                                                (view.termNames (Ref reference))
-                                        )
-                                    )
+                tipe =
+                    case linkRef of
+                        Builtin str ->
+                            Just (text str)
 
-                            else
-                                none
-                        , onClick (User_ToggleTerm id)
-                        , onMouseEnter (User_Hover (HoverTerm i reference))
-                        , onMouseLeave User_Unhover
-                        , pointer
+                        Derived id ->
+                            Maybe.map
+                                (viewType view [ i, 1 ] -1 << makeVType)
+                                (view.getTermType id)
+
+                viewLinkRef2 linkName linkType =
+                    row []
+                        [ text (Unison.Name.nameToString linkName)
+                        , text " : "
+                        , linkType
                         ]
-                        (text name2)
-                    , maybe
-                        none
-                        (\type_ ->
-                            row []
-                                [ text " : "
-                                , viewType view [ i, 1 ] -1 (makeVType type_)
-                                ]
-                        )
-                        (view.getTermType id)
-                    ]
-                , if view.isTermVisible id then
-                    maybe
-                        none
-                        (\term ->
+            in
+            Maybe.map2 viewLinkRef2 term tipe
+    in
+    column []
+        [ case reference of
+            Builtin _ ->
+                el
+                    [ above <|
+                        if view.hovered == Just (HoverTerm i reference) then
                             el
-                                [ codeFont
-                                , paddingEach { bottom = 5, left = 10, right = 0, top = 5 }
-                                ]
-                                (viewTerm view term)
-                        )
-                        (view.getTerm id)
+                                hoverStyle
+                                (column
+                                    []
+                                    (List.map
+                                        (nameToString >> text)
+                                        (view.termNames (Ref reference))
+                                    )
+                                )
 
-                  else
-                    none
-                ]
+                        else
+                            none
+                    , codeFont
+                    , onMouseEnter (User_Hover (HoverTerm i reference))
+                    , onMouseLeave User_Unhover
+                    ]
+                    (text name2)
+
+            Derived id ->
+                column []
+                    [ row
+                        [ codeFont
+                        ]
+                        [ el
+                            [ above <|
+                                if view.hovered == Just (HoverTerm i reference) then
+                                    el
+                                        hoverStyle
+                                        (column
+                                            []
+                                            (el
+                                                [ hashColor ]
+                                                (text id.hash)
+                                                :: List.map
+                                                    (nameToString >> text)
+                                                    (view.termNames (Ref reference))
+                                            )
+                                        )
+
+                                else
+                                    none
+                            , onClick (User_ToggleTerm id)
+                            , onMouseEnter (User_Hover (HoverTerm i reference))
+                            , onMouseLeave User_Unhover
+                            , pointer
+                            ]
+                            (text name2)
+                        , maybe
+                            none
+                            (\type_ ->
+                                row []
+                                    [ text " : "
+                                    , viewType view [ i, 1 ] -1 (makeVType type_)
+                                    ]
+                            )
+                            (view.getTermType id)
+                        ]
+                    , if view.isTermVisible id then
+                        maybe
+                            none
+                            (\term ->
+                                el
+                                    [ codeFont
+                                    , paddingEach { bottom = 5, left = 10, right = 0, top = 5 }
+                                    ]
+                                    (viewTerm view term)
+                            )
+                            (view.getTerm id)
+
+                      else
+                        none
+                    ]
+        , case links of
+            Just ls ->
+                HashSet.toList ls
+                    |> List.filterMap (Tuple.second >> viewLinkRef)
+                    |> (\lss -> column [ width (px 200) ] [ text "links:", column [ alignRight ] lss ])
+
+            Nothing ->
+                none
+        ]
+
+
+or x y =
+    case ( x, y ) of
+        ( Just innerX, _ ) ->
+            Just innerX
+
+        ( Nothing, Just innerY ) ->
+            Just innerY
+
+        ( _, _ ) ->
+            Nothing
 
 
 {-| View a type in a branch.
