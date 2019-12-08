@@ -4,9 +4,11 @@ module Ucb.Main.Model exposing
     , Model
     , ModelCodebase
     , ModelUI
+    , Route(..)
     , getMissingPatches
     , getMissingTermTypes
     , getMissingTypeDecls
+    , route
     )
 
 import Browser.Navigation as Nav
@@ -28,6 +30,8 @@ import Unison.Referent exposing (..)
 import Unison.Symbol exposing (..)
 import Unison.Term exposing (..)
 import Unison.Type exposing (..)
+import Url
+import Url.Parser as UrlParser exposing ((</>), map)
 import Util.HashSet as HashSet
 
 
@@ -88,6 +92,9 @@ type alias ModelUI =
     { -- Branch path we're currently viewing
       branch : List NameSegment
 
+    -- will eventually replace `branch` I think
+    , route : Route
+
     -- Visible?
     , terms : HashDict Id Bool
 
@@ -100,6 +107,20 @@ type alias ModelUI =
     -- mitchell: what's this thing?
     , key : Nav.Key
     }
+
+
+type Route
+    = HeadRoute
+
+
+route : Url.Url -> Maybe Route
+route =
+    UrlParser.parse routeParser
+
+
+routeParser : UrlParser.Parser (Route -> a) a
+routeParser =
+    map HeadRoute UrlParser.top
 
 
 {-| Hovering over what?

@@ -1,4 +1,28 @@
-module Main exposing (Route(..), elmLivePort, init, jumpToTop, main, routeParser, subscriptions, update, update_Http_GetBranch, update_Http_GetBranch2, update_Http_GetHeadHash, update_Http_GetHeadHash2, update_Http_GetPatches, update_Http_GetPatches2, update_Http_GetTerm, update_Http_GetTerm2, update_Http_GetTermTypesAndTypeDecls, update_Http_GetTermTypesAndTypeDecls2, update_User_ClickBranch, update_User_FocusBranch, update_User_GetPatches, update_User_HoverTerm, update_User_Search, update_User_ToggleTerm, update_User_Unhover)
+module Main exposing
+    ( elmLivePort
+    , init
+    , jumpToTop
+    , main
+    , subscriptions
+    , update
+    , update_Http_GetBranch
+    , update_Http_GetBranch2
+    , update_Http_GetHeadHash
+    , update_Http_GetHeadHash2
+    , update_Http_GetPatches
+    , update_Http_GetPatches2
+    , update_Http_GetTerm
+    , update_Http_GetTerm2
+    , update_Http_GetTermTypesAndTypeDecls
+    , update_Http_GetTermTypesAndTypeDecls2
+    , update_User_ClickBranch
+    , update_User_FocusBranch
+    , update_User_GetPatches
+    , update_User_HoverTerm
+    , update_User_Search
+    , update_User_ToggleTerm
+    , update_User_Unhover
+    )
 
 import Browser
 import Browser.Dom as Dom
@@ -51,27 +75,6 @@ elmLivePort =
     8000
 
 
-type Route
-    = HeadRoute
-    | BranchRoute String
-    | TermRoute String
-    | TypeRoute String
-    | DeclRoute String
-    | PatchRoute String
-
-
-routeParser : UrlParser.Parser (Route -> a) a
-routeParser =
-    oneOf
-        [ map HeadRoute (UrlParser.s "head")
-        , map BranchRoute (UrlParser.s "branch" </> UrlParser.string)
-        , map TermRoute (UrlParser.s "term" </> UrlParser.string)
-        , map TypeRoute (UrlParser.s "type" </> UrlParser.string)
-        , map DeclRoute (UrlParser.s "declaration" </> UrlParser.string)
-        , map PatchRoute (UrlParser.s "patch" </> UrlParser.string)
-        ]
-
-
 init : () -> Url.Url -> Nav.Key -> ( Model, Cmd Message )
 init _ url key =
     let
@@ -102,6 +105,7 @@ init _ url key =
             , ui =
                 { branch = []
                 , terms = HashDict.empty idEquality idHashing
+                , route = HeadRoute
                 , search = ""
                 , hovered = Nothing
                 , key = key
@@ -110,12 +114,9 @@ init _ url key =
             , isDevMode = isDevMode
             }
 
-        maybeRoute =
-            UrlParser.parse routeParser url
-
         initRoute : Route
         initRoute =
-            case UrlParser.parse routeParser url of
+            case Ucb.Main.Model.route url of
                 Just route ->
                     route
 
@@ -127,33 +128,6 @@ init _ url key =
         initialCommand =
             case initRoute of
                 HeadRoute ->
-                    model.api.unison.getHeadHash
-                        |> Task.attempt Http_GetHeadHash
-
-                BranchRoute hash ->
-                    Cmd.batch
-                        [ model.api.unison.getHeadHash
-                            |> Task.attempt Http_GetHeadHash
-                        , getBranch
-                            model.api.unison
-                            model.codebase
-                            hash
-                            |> Task.attempt Http_GetBranch
-                        ]
-
-                TermRoute hash ->
-                    Debug.todo ""
-
-                -- model.api.unison.getTerm hash |> Task.attempt Http_GetTerm
-                TypeRoute hash ->
-                    Debug.todo ""
-
-                -- model.api.unison.getTermType hash |> Task.attempt Http_GetTermTypesAndTypeDecls
-                DeclRoute hash ->
-                    Debug.todo ""
-
-                -- model.api.unison.getTypeDecl hash |> Task.attempt Http_GetTermTypesAndTypeDecls
-                _ ->
                     model.api.unison.getHeadHash
                         |> Task.attempt Http_GetHeadHash
     in
@@ -200,29 +174,14 @@ update message model =
             update_User_ToggleTerm id model
 
         UrlChanged url ->
-            let
-                maybeRoute =
-                    UrlParser.parse routeParser url
-            in
-            case maybeRoute of
-                Just route ->
-                    case route of
-                        HeadRoute ->
-                            let
-                                maybeHead =
-                                    model.codebase.head
-                            in
-                            case maybeHead of
-                                Just headHash ->
-                                    update_User_FocusBranch headHash model
+            case Ucb.Main.Model.route url of
+                Just HeadRoute ->
+                    case model.codebase.head of
+                        Just headHash ->
+                            { model | ui = (\ui -> { ui | route = HeadRoute }) model.ui }
+                                |> update_User_FocusBranch headHash
 
-                                Nothing ->
-                                    ( model, Cmd.none )
-
-                        BranchRoute hash ->
-                            update_User_FocusBranch hash model
-
-                        _ ->
+                        Nothing ->
                             ( model, Cmd.none )
 
                 Nothing ->
@@ -231,40 +190,7 @@ update message model =
         LinkClicked urlType ->
             case urlType of
                 Browser.Internal url ->
-                    let
-                        maybeRoute =
-                            UrlParser.parse routeParser url
-                    in
-                    case maybeRoute of
-                        Just route ->
-                            case route of
-                                HeadRoute ->
-                                    let
-                                        maybeHead =
-                                            model.codebase.head
-
-                                        path =
-                                            case maybeHead of
-                                                Just headHash ->
-                                                    "/branch/" ++ headHash
-
-                                                Nothing ->
-                                                    ""
-                                    in
-                                    ( model, Nav.pushUrl model.ui.key path )
-
-                                BranchRoute hash ->
-                                    let
-                                        path =
-                                            "/branch/" ++ hash
-                                    in
-                                    ( model, Nav.pushUrl model.ui.key path )
-
-                                _ ->
-                                    ( model, Cmd.none )
-
-                        Nothing ->
-                            ( model, Cmd.none )
+                    ( model, Cmd.none )
 
                 Browser.External link ->
                     ( model, Nav.load link )
